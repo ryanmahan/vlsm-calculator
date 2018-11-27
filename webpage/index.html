@@ -5,6 +5,7 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="index.css">
   <script src="canvas.js"></script>
+  <script src="save_as.js"></script>
 </head>
 <body>
   <br>
@@ -29,4 +30,8 @@
       <p>Type greek letter: put a backslash before it (like "\beta")</p>
     </div>
   </div>
+  <button class="btn btn-primary" onclick=saveAsPNG()>Save As PNG</button>
+  <button class="btn btn-primary" onclick=saveAsLaTeX()>Save As LaTeX</button>
+  <button class="btn btn-primary" onclick=saveAsSVG()>Save As SVG</button>
+  <iframe id="download_frame" style="display:none;"></iframe>
 </body>
