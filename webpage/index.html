@@ -1,9 +1,10 @@
 <head>
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="index.css">
+  <script src="ip-subnet-calculator.js"></script>
   <script src="canvas.js"></script>
   <script src="save_as.js"></script>
 </head>
@@ -13,25 +14,59 @@
     <canvas class="mx-auto" id="canvas"></canvas>
   </div>
   <br>
+  <div class="container">
+    <div id="sizealert" class="alert alert-danger" role="alert" style="display: none; min-width: 95%;">
+      The amount of hosts you want cannot fit in your subnet mask size.
+    </div>
+  </div>
   <div class="row">
     <div class="col-1"></div>
     <div class="col-5 form-group row">
       <label for="example-text-input" class="col-4 col-form-label">Starting Address</label>
       <div class="col-8">
-        <input class="form-control" type="text" value="192.168.1.0" id="example-text-input">
-        <button class="mt-4 btn btn-primary">Calculate VLSM</button>
+        <input class="form-control" onfocus="this.placeholder = ''" type="text" value="192.168.1.0/24" id="startingAddress">
+        <button id="vlsm" class="mt-4 btn btn-primary">Calculate VLSM</button>
       </div>
+      <div class="mt-2 btn-group">
+          <button class="btn btn-primary" onclick=saveAsPNG()>Save As PNG</button>
+          <button class="btn btn-primary" onclick=saveAsLaTeX()>Save As LaTeX</button>
+          <button class="btn btn-primary" onclick=saveAsSVG()>Save As SVG</button>
+        </div>
     </div>
     <div class="col-6">
       <p>Add a subnet: double-click on the canvas</p>
+      <p>Show a subnet's info: double-click on a subnet</p>
       <p>Add an link: shift-drag on the canvas</p>
       <p>Delete something: click it and press shift+backspace</p>
-      <p>Type numeric subscript: put an underscore before the number (like "S_0")</p>
-      <p>Type greek letter: put a backslash before it (like "\beta")</p>
     </div>
   </div>
-  <button class="btn btn-primary" onclick=saveAsPNG()>Save As PNG</button>
-  <button class="btn btn-primary" onclick=saveAsLaTeX()>Save As LaTeX</button>
-  <button class="btn btn-primary" onclick=saveAsSVG()>Save As SVG</button>
-  <iframe id="download_frame" style="display:none;"></iframe>
+  <div id="subnetinfo" class="modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+  
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title">Subnet Info</h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+  
+        <!-- Modal body -->
+        <div class="modal-body">
+          <span id="precalculation">Run a VLSM Calculation to see subnet info</span> <br>
+          CIDR: <span id="addressID"></span>/<span id="slash"></span> <br>
+          Broadcast: <span id="broadcast"></span> <br>
+          Usable Addresses: <span id="usable"></span> <br>
+          Usable Range: <span id="starting"></span> - <span id="ending"></span> <br>
+          Bits: <span id="bits"></span> <br>
+        </div>
+  
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+  
+      </div>
+    </div>
+  </div>
+  
 </body>

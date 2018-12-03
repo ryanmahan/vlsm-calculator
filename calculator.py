@@ -24,5 +24,3 @@ def calculate():
         starting_address = broadcast+1
         print(subnet-2, "\t", address, "\t", broadcast, "\t", usable_range, "\t", slash)
     return("success")
-
-

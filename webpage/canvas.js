@@ -173,6 +173,9 @@ Node.prototype.draw = function(c) {
 
 	// draw the text
 	drawText(c, this.text, this.x, this.y, null, selectedObject == this);
+	if (this.addressID !== undefined) {
+		drawText(c, this.addressID, this.x, this.y + nodeRadius + 15, null, selectedObject == this, false)
+	}
 
 	// draw a double circle for an accept state
 	if(this.isAcceptState) {
@@ -212,24 +215,6 @@ TemporaryLink.prototype.draw = function(c) {
 	drawArrow(c, this.to.x, this.to.y, Math.atan2(this.to.y - this.from.y, this.to.x - this.from.x));
 };
 
-var greekLetterNames = [ 'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon', 'Phi', 'Chi', 'Psi', 'Omega' ];
-
-function convertLatexShortcuts(text) {
-	// html greek characters
-	for(var i = 0; i < greekLetterNames.length; i++) {
-		var name = greekLetterNames[i];
-		text = text.replace(new RegExp('\\\\' + name, 'g'), String.fromCharCode(913 + i + (i > 16)));
-		text = text.replace(new RegExp('\\\\' + name.toLowerCase(), 'g'), String.fromCharCode(945 + i + (i > 16)));
-	}
-
-	// subscripts
-	for(var i = 0; i < 10; i++) {
-		text = text.replace(new RegExp('_' + i, 'g'), String.fromCharCode(8320 + i));
-	}
-
-	return text;
-}
-
 function drawArrow(c, x, y, angle) {
 	var dx = Math.cos(angle);
 	var dy = Math.sin(angle);
@@ -243,8 +228,8 @@ function canvasHasFocus() {
 	return (document.activeElement || document.body) == document.body;
 }
 
-function drawText(c, originalText, x, y, angleOrNull, isSelected) {
-	text = convertLatexShortcuts(originalText);
+function drawText(c, originalText, x, y, angleOrNull, isSelected, caret=true) {
+  var text = originalText
 	c.font = '20px "Times New Roman", serif';
 	var width = c.measureText(text).width;
 
@@ -269,7 +254,7 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
 		x = Math.round(x);
 		y = Math.round(y);
 		c.fillText(text, x, y + 6);
-		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus()) {
+		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus() && caret) {
 			x += width;
 			c.beginPath();
 			c.moveTo(x, y - 10);
@@ -358,6 +343,20 @@ function snapNode(node) {
 	}
 }
 
+function showNodeInfo(node) {
+	if (node.addressID !== undefined) {
+    $("#precalculation").hide()
+    $("#addressID").text(node.addressID)
+    $("#slash").text(node.slash)
+    $("#broadcast").text(node.broadcast)
+    $("#usable").text(node.usable)
+    $("#starting").text(node.starting)
+    $("#ending").text(node.ending)
+    $("#bits").text(node.bits)
+  }
+  $("#subnetinfo").modal("show")
+}
+
 window.onload = function() {
   canvas = document.getElementById('canvas');
   canvas.width = window.innerWidth*.9
@@ -408,8 +407,7 @@ window.onload = function() {
 			resetCaret();
 			draw();
 		} else if(selectedObject instanceof Node) {
-			selectedObject.isAcceptState = !selectedObject.isAcceptState;
-			draw();
+			showNodeInfo(selectedObject)
 		}
 	};
 
@@ -490,6 +488,7 @@ document.onkeydown = function(e) {
         selectedObject = null;
         draw();
       }
+      selectedObject.text = String(selectedObject.text)
 			selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
 			resetCaret();
 			draw();
@@ -590,6 +589,8 @@ function circleFromThreePoints(x1, y1, x2, y2, x3, y3) {
 	};
 }
 
+// localstorage backup functions
+
 function restoreBackup() {
 	if(!localStorage || !JSON) {
 		return;
@@ -664,3 +665,69 @@ function saveBackup() {
 
 	localStorage['fsm'] = JSON.stringify(backup);
 }
+
+// VLSM Calculator functions
+
+function addToAddress(address, add) {
+	let decimal = IpSubnetCalculator.toDecimal(address) + add
+	let newer = IpSubnetCalculator.toString(decimal)
+	return newer
+}
+
+function parseNodeText(node) {
+  if (node.text === undefined || node.text === NaN || node.text === null || node.text === "") {
+    node.text = 1
+  } else {
+    node.text = parseInt(node.text, 10)
+  }
+  return node
+}
+
+function compareNodes(nodeA, nodeB) {
+  if (nodeA.text < nodeB.text) {
+    return 1
+  } else if (nodeA.text > nodeB.text) {
+    return -1
+  } else return 0
+}
+
+reducer = (accumulator, curr) => {
+	return accumulator + curr.text + 2
+}
+
+$(document).ready(() => {
+  $("#vlsm").click(() => {
+    if (!$("#startingAddress").val().includes("/")) {
+      alert("Starting Address should be in CIDR format")
+    }
+
+    let starting_address = $("#startingAddress").val().split("/")[0]
+    nodes = nodes.map(x => parseNodeText(x))
+    let max_addresses = Math.pow(2, (32 - $("#startingAddress").val().split("/")[1]))-2
+    let wanted_addresses = nodes.reduce(reducer, 0)
+    if (wanted_addresses > max_addresses) {
+      $("#sizealert").slideDown()
+    }
+
+    nodes = nodes.sort(compareNodes)
+    
+    nodes.forEach((node) => {
+      node.addressID = starting_address
+      node.bits = Math.ceil(Math.log2(node.text+2))
+      node.addresses = Math.pow(2, node.bits)
+      node.usable = node.addresses-2
+      node.slash = 32 - node.bits
+      node.starting = addToAddress(node.addressID, 1)
+      node.broadcast = addToAddress(node.addressID, node.addresses-1)
+      node.ending = addToAddress(node.broadcast, -1)
+      starting_address = addToAddress(node.broadcast, 1)
+    })
+    draw()
+  })
+})
+
+$(function(){
+  $('input').focusin(function(){
+      $(this).attr('placeholder','');
+  });
+})
