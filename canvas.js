@@ -668,12 +668,14 @@ function saveBackup() {
 
 // VLSM Calculator functions
 
+// converts address to a decimal number and adds the addresses we need to it
 function addToAddress(address, add) {
 	let decimal = IpSubnetCalculator.toDecimal(address) + add
 	let newer = IpSubnetCalculator.toString(decimal)
 	return newer
 }
 
+// converts node text to numbers so we can use it in the add to address function
 function parseNodeText(node) {
   if (node.text === undefined || node.text === NaN || node.text === null || node.text === "") {
     node.text = 1
@@ -683,6 +685,7 @@ function parseNodeText(node) {
   return node
 }
 
+// comparator for the sort function that sorts based on hosts required 
 function compareNodes(nodeA, nodeB) {
   if (nodeA.text < nodeB.text) {
     return 1
@@ -691,16 +694,20 @@ function compareNodes(nodeA, nodeB) {
   } else return 0
 }
 
+// reducer for calculating out amount of IPs required
 reducer = (accumulator, curr) => {
 	return accumulator + curr.text + 2
 }
 
 $(document).ready(() => {
+	// click handler for the calculate VLSM button
   $("#vlsm").click(() => {
+
     if (!$("#startingAddress").val().includes("/")) {
       alert("Starting Address should be in CIDR format")
     }
 
+		// parses input and calculates needed addresses and max address size
     let starting_address = $("#startingAddress").val().split("/")[0]
     nodes = nodes.map(x => parseNodeText(x))
     let max_addresses = Math.pow(2, (32 - $("#startingAddress").val().split("/")[1]))-2
@@ -710,7 +717,8 @@ $(document).ready(() => {
     }
 
     nodes = nodes.sort(compareNodes)
-    
+		
+		// calculates the data we want to display for each node on the canvas
     nodes.forEach((node) => {
       node.addressID = starting_address
       node.bits = Math.ceil(Math.log2(node.text+2))
@@ -728,6 +736,7 @@ $(document).ready(() => {
 
 $(function(){
   $('input').focusin(function(){
-      $(this).attr('placeholder','');
+			$(this).attr('placeholder','');
+			$(this).val('')
   });
 })
