@@ -750,7 +750,7 @@ function addToAddress(address, add) {
 // converts node text to numbers so we can use it in the add to address function
 function parseNodeText(node) {
   if (node.text === undefined || node.text === NaN || node.text === null || node.text === "") {
-    node.text = 1
+		node.text = ""
   } else {
     node.text = parseInt(node.text, 10)
   }
@@ -792,16 +792,36 @@ $(document).ready(() => {
 		
 		// calculates the data we want to display for each node on the canvas
     nodes.forEach((node) => {
-      node.addressID = starting_address
-      node.bits = Math.ceil(Math.log2(node.text+2))
-      node.addresses = Math.pow(2, node.bits)
-      node.usable = node.addresses-2
-      node.slash = 32 - node.bits
-      node.starting = addToAddress(node.addressID, 1)
-      node.broadcast = addToAddress(node.addressID, node.addresses-1)
-      node.ending = addToAddress(node.broadcast, -1)
-      starting_address = addToAddress(node.broadcast, 1)
-    })
+			if (!node.isRouter) {
+				node.addressID = starting_address
+				node.bits = Math.ceil(Math.log2(node.text+2))
+				node.addresses = Math.pow(2, node.bits)
+				node.usable = node.addresses-2
+				node.slash = 32 - node.bits
+				node.starting = addToAddress(node.addressID, 1)
+				node.broadcast = addToAddress(node.addressID, node.addresses-1)
+				node.ending = addToAddress(node.broadcast, -1)
+				starting_address = addToAddress(node.broadcast, 1)
+			}
+		})
+		
+		
+		links.forEach((link) => {
+			console.log(link)
+			if (link.nodeA.isRouter && link.nodeB.isRouter) {
+				[link.nodeA, link.nodeB].forEach((node) => {
+					node.addressID = starting_address
+					node.bits = Math.ceil(Math.log2(node.text+2))
+					node.addresses = Math.pow(2, node.bits)
+					node.usable = node.addresses-2
+					node.slash = 32 - node.bits
+					node.starting = addToAddress(node.addressID, 1)
+					node.broadcast = addToAddress(node.addressID, node.addresses-1)
+					node.ending = addToAddress(node.broadcast, -1)
+					starting_address = addToAddress(node.broadcast, 1)
+				})
+			}
+		})
     draw()
   })
 })
