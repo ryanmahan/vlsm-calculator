@@ -393,6 +393,34 @@ function selectObject(x, y) {
 	return null;
 }
 
+function deleteObject(object) {
+	if(object != null) {
+		if (object instanceof Node) {
+			for(let i = 0 ; i < links.length ; i++) {
+				if (links[i].nodeA === object || links[i].nodeB === object) {
+					links.splice(i--, 1)
+				}
+			}
+			// links.forEach((link) => {
+			// 	if (link.nodeA === object || link.nodeB === object) {
+			// 		console.log(link)
+			// 		deleteObject(link)
+			// 	}
+			// })
+			let index = nodes.indexOf(object);
+			if (index > -1) {
+				nodes.splice(index, 1);
+			}
+		} else {
+			index = links.indexOf(object) 
+			if (index > -1) {
+				links.splice(index, 1)
+			}
+		}
+		draw();
+	}
+}
+
 function snapNode(node) {
 	for(var i = 0; i < nodes.length; i++) {
 		if(nodes[i] == node) continue;
@@ -535,32 +563,21 @@ window.onload = function() {
 }
 
 var shift = false;
-var ctrl = false
 
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
 	if(key == 16) {
 		shift = true;
-	} else if (key == 17) {
-		ctrl = true
 	} else if(!canvasHasFocus()) {
 		// don't read keystrokes when other things have focus
 		return true;
 	} else if(key == 8) { // backspace key
 		if(selectedObject != null && 'text' in selectedObject) {
       if(selectedObject.text.length == 0) {
-        for(var i = 0; i < nodes.length; i++) {
-          if(nodes[i] == selectedObject) {
-            nodes.splice(i--, 1);
-          }
-        }
-        for(var i = 0; i < links.length; i++) {
-          if(links[i] == selectedObject || links[i].node == selectedObject || links[i].nodeA == selectedObject || links[i].nodeB == selectedObject) {
-            links.splice(i--, 1);
-          }
-        }
+        deleteObject(selectedObject)
         selectedObject = null;
-        draw();
+				draw();
+				return
       }
       selectedObject.text = String(selectedObject.text)
 			selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
@@ -569,18 +586,7 @@ document.onkeydown = function(e) {
 		}
   }
   if(key == 46 || shift == true && key == 8) { // delete item
-		if(selectedObject != null) {
-			let index = nodes.indexOf(selectedObject);
-			if (index > -1) {
-				nodes.splice(index, 1);
-			}
-			index = links.indexOf(selectedObject) 
-			if (index > -1) {
-				links.splice(index, 1)
-			}
-			selectedObject = null;
-			draw();
-		}
+		deleteObject()
 	}
 };
 
@@ -598,8 +604,6 @@ document.onkeyup = function(e) {
 	var key = crossBrowserKey(e);
 	if(key == 16) {
 		shift = false;
-	} else if (key == 17) {
-		ctrl = false;
 	}
 };
 
@@ -613,13 +617,8 @@ document.onkeypress = function(e) {
 		selectedObject.text += String.fromCharCode(key);
 		resetCaret();
 		draw();
-
-		// don't let keys do their actions (like space scrolls down the page)
 		return false;
-	} else if(key == 8) {
-		// backspace is a shortcut for the back button, but do NOT want to change pages
-		return false;
-	}
+	} 
 };
 
 function crossBrowserKey(e) {
@@ -787,7 +786,7 @@ reducer = (accumulator, curr) => {
 }
 
 $(document).ready(() => {
-	
+
 	// click handler for the context menu
 	$("#toggleType").on("click", () => {
 		selectedObject.isRouter = !selectedObject.isRouter
@@ -801,18 +800,7 @@ $(document).ready(() => {
 	})
 
 	$("#deletebutton").on("click", () => {
-		if(selectedObject != null) {
-			let index = nodes.indexOf(selectedObject);
-			if (index > -1) {
-				nodes.splice(index, 1);
-			}
-			index = links.indexOf(selectedObject) 
-			if (index > -1) {
-				links.splice(index, 1)
-			}
-			selectedObject = null;
-			draw();
-		}
+		deleteObject(selectedObject)
 		$("#context-menu").hide()
 	})
 
