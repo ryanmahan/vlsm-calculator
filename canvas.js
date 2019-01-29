@@ -1,4 +1,4 @@
-/* Code partially modified from its implementation on madebyevan.com/fsm, changed for networks instead of finite state machines */
+/* Code modified from its implementation on madebyevan.com/fsm, changed for networks instead of finite state machines */
 
 function Link(a, b) {
 	this.nodeA = a;
@@ -146,6 +146,9 @@ Link.prototype.containsPoint = function(x, y) {
 	return false;
 };
 
+
+/* ############## START NODE ############ */
+
 function Node(x, y) {
 	this.x = x;
 	this.y = y;
@@ -168,7 +171,7 @@ Node.prototype.setAnchorPoint = function(x, y) {
 var squareScale = .9
 
 Node.prototype.draw = function(c) {
-	// draw the circle
+	// draw a subnet
 	if(!this.isRouter) {
 		c.beginPath()
 		c.rect(this.x-squareScale*nodeRadius, this.y-squareScale*nodeRadius, nodeRadius*2*squareScale, nodeRadius*2*squareScale)
@@ -181,7 +184,7 @@ Node.prototype.draw = function(c) {
 		drawText(c, this.addressID, this.x, this.y + nodeRadius + 15, null, selectedObject == this, false)
 	}
 
-	// draw a double circle for an accept state
+	// draw a router
 	if(this.isRouter) {
 		c.beginPath();
 		c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
@@ -426,6 +429,7 @@ window.onload = function() {
 	draw();
 
 	canvas.onmousedown = function(e) {
+		$("#context-menu").hide()
 		var mouse = crossBrowserRelativeMousePos(e);
 		selectedObject = selectObject(mouse.x, mouse.y);
 		movingObject = false;
@@ -433,8 +437,6 @@ window.onload = function() {
 		if(selectedObject != null) {
 			if(shift && selectedObject instanceof Node) {
 				currentLink = new TemporaryLink(selectedObject, mouse);
-			} else if (ctrl && selectedObject instanceof Node) {
-				selectedObject.isRouter = !selectedObject.isRouter
 			} else {
 				movingObject = true;
 				deltaMouseX = deltaMouseY = 0;
@@ -458,6 +460,14 @@ window.onload = function() {
 			return true;
 		}
 	};
+
+	canvas.oncontextmenu = (e) => {
+		var mouse = crossBrowserRelativeMousePos(e)
+		selectedObject = selectObject(mouse.x, mouse.y)
+		if(selectedObject instanceof Node) {
+			showContextMenu(e.pageX, e.pageY)
+		}
+	}
 
 	canvas.ondblclick = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -529,7 +539,6 @@ var ctrl = false
 
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
-	console.log(key)
 	if(key == 16) {
 		shift = true;
 	} else if (key == 17) {
@@ -559,17 +568,15 @@ document.onkeydown = function(e) {
 			draw();
 		}
   }
-  if(key == 46 || shift == true && key == 8) { // delete key
+  if(key == 46 || shift == true && key == 8) { // delete item
 		if(selectedObject != null) {
-			for(var i = 0; i < nodes.length; i++) {
-				if(nodes[i] == selectedObject) {
-					nodes.splice(i--, 1);
-				}
+			let index = nodes.indexOf(selectedObject);
+			if (index > -1) {
+				nodes.splice(index, 1);
 			}
-			for(var i = 0; i < links.length; i++) {
-				if(links[i] == selectedObject || links[i].node == selectedObject || links[i].nodeA == selectedObject || links[i].nodeB == selectedObject) {
-					links.splice(i--, 1);
-				}
+			index = links.indexOf(selectedObject) 
+			if (index > -1) {
+				links.splice(index, 1)
 			}
 			selectedObject = null;
 			draw();
@@ -578,18 +585,22 @@ document.onkeydown = function(e) {
 };
 
 window.addEventListener("contextmenu", e => {
-  e.preventDefault();
-});
+	e.preventDefault();
+})
+
+function showContextMenu(mx, my) {
+	console.log("show menue")
+	$("#context-menu").css({"top": my, "left": mx, "position": "absolute"})
+	$("#context-menu").show()
+}
 
 document.onkeyup = function(e) {
 	var key = crossBrowserKey(e);
-	console.log(key + "Up")
 	if(key == 16) {
 		shift = false;
 	} else if (key == 17) {
 		ctrl = false;
 	}
-	console.log(ctrl)
 };
 
 document.onkeypress = function(e) {
@@ -768,10 +779,43 @@ function compareNodes(nodeA, nodeB) {
 
 // reducer for calculating out amount of IPs required
 reducer = (accumulator, curr) => {
-	return accumulator + curr.text + 2
+	if (curr.text === "") {
+		return accumulator
+	} else {
+		return accumulator + curr.text + 2
+	}
 }
 
 $(document).ready(() => {
+	
+	// click handler for the context menu
+	$("#toggleType").on("click", () => {
+		selectedObject.isRouter = !selectedObject.isRouter
+		draw()
+		$("#context-menu").hide()
+	});
+
+	$("#subnetinfobutton").on("click", () => {
+		showNodeInfo(selectedObject)
+		$("#context-menu").hide()
+	})
+
+	$("#deletebutton").on("click", () => {
+		if(selectedObject != null) {
+			let index = nodes.indexOf(selectedObject);
+			if (index > -1) {
+				nodes.splice(index, 1);
+			}
+			index = links.indexOf(selectedObject) 
+			if (index > -1) {
+				links.splice(index, 1)
+			}
+			selectedObject = null;
+			draw();
+		}
+		$("#context-menu").hide()
+	})
+
 	// click handler for the calculate VLSM button
   $("#vlsm").click(() => {
 
@@ -783,7 +827,7 @@ $(document).ready(() => {
     let starting_address = $("#startingAddress").val().split("/")[0]
     nodes = nodes.map(x => parseNodeText(x))
     let max_addresses = Math.pow(2, (32 - $("#startingAddress").val().split("/")[1]))-2
-    let wanted_addresses = nodes.reduce(reducer, 0)
+		let wanted_addresses = nodes.reduce(reducer, 0)
     if (wanted_addresses > max_addresses) {
       $("#sizealert").slideDown()
     }
@@ -807,7 +851,6 @@ $(document).ready(() => {
 		
 		
 		links.forEach((link) => {
-			console.log(link)
 			if (link.nodeA.isRouter && link.nodeB.isRouter) {
 				[link.nodeA, link.nodeB].forEach((node) => {
 					node.addressID = starting_address
