@@ -288,10 +288,6 @@ function drawArrow(c, x, y, angle) {
 	c.lineTo(x - 8 * dx - 5 * dy, y - 8 * dy + 5 * dx);
 }
 
-function canvasHasFocus() {
-	return (document.activeElement || document.body) == document.body;
-}
-
 function drawText(c, originalText, x, y, angleOrNull, isSelected, caret=true) {
   var text = originalText
 	c.font = '20px "Times New Roman", serif';
@@ -318,7 +314,7 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected, caret=true) {
 		x = Math.round(x);
 		y = Math.round(y);
 		c.fillText(text, x, y + 6);
-		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus() && caret) {
+		if(isSelected && caretVisible && document.hasFocus() && caret) {
 			x += width;
 			c.beginPath();
 			c.moveTo(x, y - 10);
@@ -401,12 +397,6 @@ function deleteObject(object) {
 					links.splice(i--, 1)
 				}
 			}
-			// links.forEach((link) => {
-			// 	if (link.nodeA === object || link.nodeB === object) {
-			// 		console.log(link)
-			// 		deleteObject(link)
-			// 	}
-			// })
 			let index = nodes.indexOf(object);
 			if (index > -1) {
 				nodes.splice(index, 1);
@@ -478,15 +468,6 @@ window.onload = function() {
 		}
 
 		draw();
-
-		if(canvasHasFocus()) {
-			// disable drag-and-drop only if the canvas is already focused
-			return false;
-		} else {
-			// otherwise, let the browser switch the focus away from wherever it was
-			resetCaret();
-			return true;
-		}
 	};
 
 	canvas.oncontextmenu = (e) => {
@@ -568,9 +549,6 @@ document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
 	if(key == 16) {
 		shift = true;
-	} else if(!canvasHasFocus()) {
-		// don't read keystrokes when other things have focus
-		return true;
 	} else if(key == 8) { // backspace key
 		if(selectedObject != null && 'text' in selectedObject) {
       if(selectedObject.text.length == 0) {
@@ -589,6 +567,12 @@ document.onkeydown = function(e) {
 		deleteObject()
 	}
 };
+
+document.onmousedown = (e) => {
+	if (e.toElement.tagName !== "CANVAS") {
+		selectedObject = null
+	}
+}
 
 window.addEventListener("contextmenu", e => {
 	e.preventDefault();
@@ -610,10 +594,7 @@ document.onkeyup = function(e) {
 document.onkeypress = function(e) {
 	// don't read keystrokes when other things have focus
 	var key = crossBrowserKey(e);
-	if(!canvasHasFocus()) {
-		// don't read keystrokes when other things have focus
-		return true;
-	} else if(key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey && selectedObject != null && 'text' in selectedObject) {
+	if(key >= 0x20 && key <= 0x7E && !e.metaKey && !e.altKey && !e.ctrlKey && selectedObject != null && 'text' in selectedObject) {
 		selectedObject.text += String.fromCharCode(key);
 		resetCaret();
 		draw();
