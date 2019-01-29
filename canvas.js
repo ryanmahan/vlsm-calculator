@@ -38,8 +38,8 @@ Link.prototype.getEndPointsAndCircle = function() {
 	if(this.perpendicularPart == 0) {
 		var midX = (this.nodeA.x + this.nodeB.x) / 2;
 		var midY = (this.nodeA.y + this.nodeB.y) / 2;
-		var start = this.nodeA.closestPointOnCircle(midX, midY);
-		var end = this.nodeB.closestPointOnCircle(midX, midY);
+		var start = this.nodeA.closestPointOnNode(midX, midY);
+		var end = this.nodeB.closestPointOnNode(midX, midY);
 		return {
 			'hasCircle': false,
 			'startX': start.x,
@@ -151,7 +151,7 @@ function Node(x, y) {
 	this.y = y;
 	this.mouseOffsetX = 0;
 	this.mouseOffsetY = 0;
-	this.isAcceptState = false;
+	this.isRouter = false;
 	this.text = '';
 }
 
@@ -165,11 +165,15 @@ Node.prototype.setAnchorPoint = function(x, y) {
 	this.y = y + this.mouseOffsetY;
 };
 
+var squareScale = .9
+
 Node.prototype.draw = function(c) {
 	// draw the circle
-	c.beginPath();
-	c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
-	c.stroke();
+	if(!this.isRouter) {
+		c.beginPath()
+		c.rect(this.x-squareScale*nodeRadius, this.y-squareScale*nodeRadius, nodeRadius*2*squareScale, nodeRadius*2*squareScale)
+		c.stroke()
+	}
 
 	// draw the text
 	drawText(c, this.text, this.x, this.y, null, selectedObject == this);
@@ -178,21 +182,78 @@ Node.prototype.draw = function(c) {
 	}
 
 	// draw a double circle for an accept state
-	if(this.isAcceptState) {
+	if(this.isRouter) {
 		c.beginPath();
-		c.arc(this.x, this.y, nodeRadius - 6, 0, 2 * Math.PI, false);
+		c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
+		c.moveTo(this.x-.6*nodeRadius, this.y-.6*nodeRadius)
+		c.lineTo(this.x+.6*nodeRadius, this.y+.6*nodeRadius)
+		c.moveTo(this.x-.6*nodeRadius, this.y+.6*nodeRadius)
+		c.lineTo(this.x+.6*nodeRadius, this.y-.6*nodeRadius)
 		c.stroke();
 	}
 };
 
-Node.prototype.closestPointOnCircle = function(x, y) {
-	var dx = x - this.x;
-	var dy = y - this.y;
-	var scale = Math.sqrt(dx * dx + dy * dy);
-	return {
-		'x': this.x + dx * nodeRadius / scale,
-		'y': this.y + dy * nodeRadius / scale,
-	};
+Node.prototype.closestPointOnNode = function(x, y) {
+	if (this.isRouter) { // is a circle
+		var dx = x - this.x;
+		var dy = y - this.y;
+		var scale = Math.sqrt(dx * dx + dy * dy);
+		return {
+			'x': this.x + dx * nodeRadius / scale,
+			'y': this.y + dy * nodeRadius / scale,
+		};
+	}
+	else { // is a square
+		let xleft = this.x-squareScale*nodeRadius
+		let xright = this.x+squareScale*nodeRadius
+		let ytop = this.y-squareScale*nodeRadius
+		let ybot = this.y+squareScale*nodeRadius
+		if (x < xleft) { // left side
+			if (y < ytop) { // top left corner
+				return {
+					'x': xleft,
+					'y': ytop
+				}
+			} else if (y > ybot) {// bot left corner
+				return {
+					'x': xleft,
+					'y': ybot
+				}
+			} else { // left, but not a corner
+				return {
+					'x': xleft,
+					'y': y
+				}
+			}
+		} else if (x > xright) { // right side
+			if (y < ytop) { // top right corner
+				return {
+					'x': xright,
+					'y': ytop
+				}
+			} else if (y > ybot) {// bot right corner
+				return {
+					'x': xright,
+					'y': ybot
+				}
+			} else { // right, but not a corner
+				return {
+					'x': xright,
+					'y': y
+				}
+			}
+		} else if (y < ytop) { // top, but not a corner
+			return {
+				'x': x,
+				'y': ytop
+			}
+		} else { // bot, but not a corner
+			return {
+				'x': x,
+				'y': ybot
+			}
+		}
+	}
 };
 
 Node.prototype.containsPoint = function(x, y) {
@@ -369,10 +430,11 @@ window.onload = function() {
 		selectedObject = selectObject(mouse.x, mouse.y);
 		movingObject = false;
 		originalClick = mouse;
-
 		if(selectedObject != null) {
 			if(shift && selectedObject instanceof Node) {
 				currentLink = new TemporaryLink(selectedObject, mouse);
+			} else if (ctrl && selectedObject instanceof Node) {
+				selectedObject.isRouter = !selectedObject.isRouter
 			} else {
 				movingObject = true;
 				deltaMouseX = deltaMouseY = 0;
@@ -432,7 +494,7 @@ window.onload = function() {
 				} else if(targetNode != null) {
 					currentLink = new Link(selectedObject, targetNode);
 				} else {
-					currentLink = new TemporaryLink(selectedObject.closestPointOnCircle(mouse.x, mouse.y), mouse);
+					currentLink = new TemporaryLink(selectedObject.closestPointOnNode(mouse.x, mouse.y), mouse);
 				}
 			}
 			draw();
@@ -463,12 +525,15 @@ window.onload = function() {
 }
 
 var shift = false;
+var ctrl = false
 
 document.onkeydown = function(e) {
 	var key = crossBrowserKey(e);
-
+	console.log(key)
 	if(key == 16) {
 		shift = true;
+	} else if (key == 17) {
+		ctrl = true
 	} else if(!canvasHasFocus()) {
 		// don't read keystrokes when other things have focus
 		return true;
@@ -512,12 +577,19 @@ document.onkeydown = function(e) {
 	}
 };
 
+window.addEventListener("contextmenu", e => {
+  e.preventDefault();
+});
+
 document.onkeyup = function(e) {
 	var key = crossBrowserKey(e);
-
+	console.log(key + "Up")
 	if(key == 16) {
 		shift = false;
+	} else if (key == 17) {
+		ctrl = false;
 	}
+	console.log(ctrl)
 };
 
 document.onkeypress = function(e) {
@@ -602,7 +674,7 @@ function restoreBackup() {
 		for(var i = 0; i < backup.nodes.length; i++) {
 			var backupNode = backup.nodes[i];
 			var node = new Node(backupNode.x, backupNode.y);
-			node.isAcceptState = backupNode.isAcceptState;
+			node.isRouter = backupNode.isRouter;
 			node.text = backupNode.text;
 			nodes.push(node);
 		}
@@ -640,7 +712,7 @@ function saveBackup() {
 			'x': node.x,
 			'y': node.y,
 			'text': node.text,
-			'isAcceptState': node.isAcceptState,
+			'isRouter': node.isRouter,
 		};
 		backup.nodes.push(backupNode);
 	}
@@ -736,7 +808,6 @@ $(document).ready(() => {
 
 $(function(){
   $('input').focusin(function(){
-			$(this).attr('placeholder','');
 			$(this).val('')
   });
 })
