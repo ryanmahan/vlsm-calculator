@@ -569,7 +569,7 @@ document.onkeydown = function(e) {
 };
 
 document.onmousedown = (e) => {
-	if (e.toElement.tagName !== "CANVAS") {
+	if (e.toElement.tagName !== "CANVAS" && e.toElement.tagName !== "A") {
 		selectedObject = null
 	}
 }
@@ -661,14 +661,8 @@ function restoreBackup() {
 
 	try {
 		var backup = JSON.parse(localStorage['fsm']);
-
-		for(var i = 0; i < backup.nodes.length; i++) {
-			var backupNode = backup.nodes[i];
-			var node = new Node(backupNode.x, backupNode.y);
-			node.isRouter = backupNode.isRouter;
-			node.text = backupNode.text;
-			nodes.push(node);
-		}
+		console.log(backup)
+		nodes = [...backup.nodes]
 		for(var i = 0; i < backup.links.length; i++) {
 			var backupLink = backup.links[i];
 			var link = null;
@@ -696,16 +690,10 @@ function saveBackup() {
 	var backup = {
 		'nodes': [],
 		'links': [],
-	};
+	}
+
 	for(var i = 0; i < nodes.length; i++) {
-		var node = nodes[i];
-		var backupNode = {
-			'x': node.x,
-			'y': node.y,
-			'text': node.text,
-			'isRouter': node.isRouter,
-		};
-		backup.nodes.push(backupNode);
+		backup.nodes.push(nodes[i])
 	}
 	for(var i = 0; i < links.length; i++) {
 		var link = links[i];
@@ -725,7 +713,7 @@ function saveBackup() {
 			backup.links.push(backupLink);
 		}
 	}
-
+	console.log(backup)
 	localStorage['fsm'] = JSON.stringify(backup);
 }
 
@@ -838,6 +826,7 @@ $(document).ready(() => {
   })
 })
 
+// remove placeholder text in input field
 $(function(){
   $('input').focusin(function(){
 			$(this).val('')
